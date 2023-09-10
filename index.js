@@ -1,4 +1,4 @@
-const {DynamoDBClient, GetItemCommand, ScanCommand, PutItemCommand, UpdateItemCommand} = require("@aws-sdk/client-dynamodb");
+import { DynamoDBClient, GetItemCommand, ScanCommand, PutItemCommand, UpdateItemCommand, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
 // setting the region
 const REGION = 'us-east-1';
 const client = new DynamoDBClient({ region: REGION });
@@ -7,31 +7,32 @@ const client = new DynamoDBClient({ region: REGION });
 const tableName = 'product-inventory';
 
 // endpoints
-const healthPath = 'health';
-const productPath = 'product';
-const productsPath = 'products';
+const healthPath = '/health';
+const productPath = '/product';
+const productsPath = '/products';
 
-exports.handler = async function(event) {
+export const handler = async(event) => {
     console.log('Request event: ', event);
     let response;
     switch(true) {
         case event.httpMethod === 'GET' && event.path === healthPath:
             response = buildResponse(200);
             break;
-        case event.httpMethod === 'GET' && event.path === healthPath:
+        case event.httpMethod === 'GET' && event.path === productPath:
             response = await getProduct(event.queryStringParameters.productId);
             break;
-        case event.httpMethod === 'GET' && event.path === healthPath:
+        case event.httpMethod === 'GET' && event.path === productsPath:
             response = await getProducts();
             break;
-        case event.httpMethod === 'POST' && event.path === healthPath:
-            response = await saveProduct(JSON.parse(event.body));
+        case event.httpMethod === 'POST' && event.path === productPath:
+            const body = JSON.parse(event.body);
+            response = await saveProduct(body);
             break;
-        case event.httpMethod === 'PATCH' && event.path === healthPath:
+        case event.httpMethod === 'PATCH' && event.path === productPath:
             const requestBody = JSON.parse(event.body);
             response = await updateProduct(requestBody.productId, requestBody.updateKey, requestBody.updateValue);
             break;
-        case event.httpMethod === 'DELETE' && event.path === healthPath:
+        case event.httpMethod === 'DELETE' && event.path === productPath:
             response = await deleteProduct(JSON.parse(event.body).productId);
             break;
     }
@@ -42,7 +43,9 @@ async function getProduct(productId) {
     const getProductById = new GetItemCommand({
         TableName: tableName,
         Key: {
-            'productId': productId
+            'productId': {
+                'S': productId
+            }
         }
     });
 
@@ -69,10 +72,10 @@ async function getProducts() {
 async function scanDynamoRecords(scanParams, itemArray) {
     try{
         const data = await client.send(scanParams);
-        itemArray = itemArray.concat;
+        itemArray = itemArray.concat(data.Items);
 
         if(data.LastEvaluatedKey) {
-            scanParams.ExclusiveStartKey = data.LastEvaluatedKey;
+            scanParams.ExclusiveStartkey = data.LastEvaluatedKey;
             return await scanDynamoRecords(scanParams, itemArray);
         }
         return itemArray;
@@ -124,7 +127,32 @@ async function updateProduct(productId, updateKey, updateValue) {
             return buildResponse(200, body);
         })
         .catch((error) => {
-            console.log('updateProduct: ', error);
+            console.error('updateProduct: ', error);
+        })
+}
+
+async function deleteProduct(productId) {
+    const deleteProductQuery = new DeleteItemCommand({
+        TableName: tableName,
+        Key: {
+            'productId': {
+                S: productId
+            }
+        },
+        ReturnValues: 'ALL_OLD'
+    })
+
+    return await client.send(deleteProductQuery)
+        .then((response) => {
+            const body = {
+                Operation: 'DELETE',
+                Message: 'SUCCESS',
+                Item: response
+            }
+            return buildResponse(200, body);
+        })
+        .catch((error) => {
+            console.error('deleteProduct: ', error);
         })
 }
 
