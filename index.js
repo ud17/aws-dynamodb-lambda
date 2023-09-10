@@ -1,4 +1,4 @@
-const {DynamoDBClient, GetItemCommand, QueryCommand, ScanCommand} = require("@aws-sdk/client-dynamodb");
+const {DynamoDBClient, GetItemCommand, ScanCommand, PutItemCommand, UpdateItemCommand} = require("@aws-sdk/client-dynamodb");
 // setting the region
 const REGION = 'us-east-1';
 const client = new DynamoDBClient({ region: REGION });
@@ -79,6 +79,53 @@ async function scanDynamoRecords(scanParams, itemArray) {
     } catch(err) {
         console.error('scanDynamoRecords: ', err);
     }
+}
+
+async function saveProduct(requestBody) {
+    const saveProductQuery = new PutItemCommand({
+        TableName: tableName,
+        Item: requestBody
+    })
+
+    return await client.send(saveProductQuery)
+        .then(() => {
+            const body = {
+                Operation: 'SAVE',
+                Message: 'SUCCESS',
+                Item: requestBody
+            }
+            return buildResponse(200, body);
+        })
+        .catch((error) => {
+            console.error('saveProduct: ', error);
+        })
+}
+
+async function updateProduct(productId, updateKey, updateValue) {
+    const updateProductQuery = new UpdateItemCommand({
+        TableName: tableName,
+        Key: {
+            'productId': productId
+        },
+        UpdateExpression: `set ${updateKey} = :value`,
+        ExpressionAttributeValues: {
+            ':value': updateValue
+        },
+        ReturnValues: "UPDATED_NEW"
+    })
+
+    return await client.send(updateProductQuery)
+        .then((response) => {
+            const body = {
+                Operation: 'UPDATE',
+                Message: 'SUCCESS',
+                Item: response
+            }
+            return buildResponse(200, body);
+        })
+        .catch((error) => {
+            console.log('updateProduct: ', error);
+        })
 }
 
 function buildResponse(statusCode, body) {
