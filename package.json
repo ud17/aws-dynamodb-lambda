@@ -1,0 +1,16 @@
+{
+  "name": "aws-dynamodb-lambda",
+  "version": "1.0.0",
+  "description": "AWS Dynamodb Lambda API Gateway serverless architecture",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Udit Pandya",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.409.0",
+    "aws-sdk": "^2.1454.0"
+  }
+}
