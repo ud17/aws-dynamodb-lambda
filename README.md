@@ -5,4 +5,4 @@
 - API Gateway
 - DynamoDB
 
-[Architecture](./aws-architecture.png)
+![Architecture](./aws-architecture.png)
