@@ -4,3 +4,5 @@
 - Lambda
 - API Gateway
 - DynamoDB
+
+[Architecture](./aws-architecture.png)
